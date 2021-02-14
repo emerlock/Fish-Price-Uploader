@@ -2,6 +2,7 @@ from blizzardapi import BlizzardApi
 import json
 from datetime import date, datetime
 import configparser
+import uuid
 
 def low_val(arr):
   '''returns lowest cost fish object from the list of fish'''
@@ -14,17 +15,10 @@ def low_val(arr):
 
   return min_dict
 
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    raise TypeError ("Type %s not serializable" % type(obj))
-
-##eventually put in lambda with 1 hr repeated schedule
+## TODO: eventually put in lambda with 1 hr repeated schedule
 
 def main():
-  ## reference config for secret key
+  
   config = configparser.ConfigParser()
   config.read('config.ini')
   client_id = config.get('DEFAULT', 'Client_ID')
@@ -34,15 +28,12 @@ def main():
 
 
   api_client = BlizzardApi(client_id, secret_id)
-  # Unprotected API endpoint
-  # actual endpoint to use once working
+  
   # 5 is proudmoore's connected server ID
-  auctions = api_client.wow.game_data.get_auctions("us", "en_US", "5")
-
-  auctions = auctions["auctions"]
-
-  ## pretend json read is the actual response for now
-
+  # TODO: In future support more servers
+  
+  response = api_client.wow.game_data.get_auctions("us", "en_US", "5")
+  auctions = response["auctions"]
 
   ## load fish
   fish_list = []
@@ -54,7 +45,15 @@ def main():
   ## pocked bonefish = 173035
   ## spinefin pirahna = 173036
   ## elysian Thade = 173037
+  # TODO: find a better way? Each expansion different
+  # items will want to be tracked
 
+  # instantiate individual fish lists..
+  # storing everything for each fish
+  # then finding lowest value to just track that
+  # reduce noise for first release
+  # TODO: In future, include more to see if market can
+  # be manipulated with buys
   lo_so = []
   ir_am = []
   si_pi = []
@@ -62,8 +61,12 @@ def main():
   sp_pi = []
   el_th = []
 
+  # declare time here instead of in loop for two reasons:
+  # one call better than unknown amount of calls
+  # keep all fish to the same hour for edge cases
   now = datetime.utcnow()
 
+  # extract out only fish auctions
   for auction in auctions:
     if auction['item']['id'] == 173032:
       auction['fish_name'] = 'Lost Sole'
@@ -96,6 +99,7 @@ def main():
       auction['hour'] = now.strftime("%H")
       el_th.append(auction)
 
+  # set lowest value item to the list of items to store in dynamodb
   fish_list.append(low_val(lo_so))
   fish_list.append(low_val(ir_am))
   fish_list.append(low_val(si_pi))
@@ -103,17 +107,12 @@ def main():
   fish_list.append(low_val(sp_pi))
   fish_list.append(low_val(el_th))
 
+  # UUID for partition key in dynamoDB
+  for item in fish_list:
+    item['GUID'] = str(uuid.uuid4())
 
+  # TODO: change to dynamodb set items
   with open('fish.json', 'w') as outfile:
     json.dump(fish_list, outfile)
 
 main()
-
-
-
-
-
-
-#test -- write response to file to testing with
-#with open('item.json', 'w') as outfile:
-#  json.dump(item, outfile)
