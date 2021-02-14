@@ -39,8 +39,6 @@ def load_table(fish_list):
       }
     )
 
-## TODO: eventually put in lambda with 1 hr repeated schedule
-
 def main():
   
   config = configparser.ConfigParser()
@@ -137,10 +135,6 @@ def main():
 
   # TODO: change to dynamodb set items
   load_table(fish_list)
-  
-  # with open('fish.json', 'w') as outfile:
-  #   json.dump(fish_list, outfile)
-
 
 def lambda_handler(event, context):
     main()
