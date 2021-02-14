@@ -141,4 +141,6 @@ def main():
   # with open('fish.json', 'w') as outfile:
   #   json.dump(fish_list, outfile)
 
-main()
+
+def lambda_handler(event, context):
+    main()
