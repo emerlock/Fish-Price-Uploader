@@ -1,8 +1,10 @@
-from blizzardapi import BlizzardApi
-import json
-from datetime import date, datetime
 import configparser
 import uuid
+from datetime import datetime
+
+import boto3
+from blizzardapi import BlizzardApi
+
 
 def low_val(arr):
   '''returns lowest cost fish object from the list of fish'''
@@ -14,6 +16,28 @@ def low_val(arr):
       min_dict = arr[a]
 
   return min_dict
+
+
+def load_table(fish_list):
+  '''puts items into dynamodb from list format'''
+
+  dynamodb = boto3.resource('dynamodb')
+
+  table = dynamodb.Table('Fish-Price')
+  for fish in fish_list:
+    table.put_item(
+      Item={
+          'GUID': fish['GUID'],
+          'id': fish['id'],
+          'item': fish['item'],
+          'quantity': fish['quantity'],
+          'unit_price': fish['unit_price'],
+          'time_left': fish['time_left'],
+          'fish_name': fish['fish_name'],
+          'date': fish['date'],
+          'hour': fish['hour'],
+      }
+    )
 
 ## TODO: eventually put in lambda with 1 hr repeated schedule
 
@@ -112,7 +136,9 @@ def main():
     item['GUID'] = str(uuid.uuid4())
 
   # TODO: change to dynamodb set items
-  with open('fish.json', 'w') as outfile:
-    json.dump(fish_list, outfile)
+  load_table(fish_list)
+  
+  # with open('fish.json', 'w') as outfile:
+  #   json.dump(fish_list, outfile)
 
 main()
